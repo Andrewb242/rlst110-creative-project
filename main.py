@@ -12,6 +12,9 @@ if __name__ == "__main__":
     # Book Selection
     program.select_book()
 
+    # Fragment Selection
+    program.select_fragment()
+
     # Chapter Selection
     program.select_chapter()
 

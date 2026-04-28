@@ -11,23 +11,30 @@ class ProgramFlow:
         self.tokenizer = Tokenizer()
         self.verbose = verbose
         self.scoring = TextScoring(verbose=verbose)
+        self.fragment = ""
         self.book = "Genesis"
         self.chapter = "1"
         self.verse = "1"
 
         # Initialization Steps
         self.show_translations()
-        self.b1 = self.select_translation(1)
-        self.b2 = self.select_translation(2)
+        self.dss = BibleLoader("DSS")
+        self.translation = ""
+        self.b = self.select_translation()
+        self.books = list(
+            set(self.dss.dictionary.keys()) & (set(self.b.dictionary.keys()))
+        )
 
-    def select_translation(self, sample: int) -> BibleLoader:
-        t_index = input(f"\n[i] Select translation for Sample {sample}: ").strip()
+    def select_translation(self) -> BibleLoader:
+        t_index = input("\n[i] Select translation: ").strip()
         while not t_index.isdigit() or int(t_index) >= len(available_translations):
             self.helper.color_print(
                 "\n[!] Incorrect input format. Please try again.", "red"
             )
-            t_index = input(f"\n[i] Select translation for Sample {sample}:").strip()
-        return BibleLoader(available_translations[int(t_index)])
+            t_index = input("\n[i] Select translation:").strip()
+        translation = available_translations[int(t_index)]
+        self.translation = translation
+        return BibleLoader(translation)
 
     def show_translations(self):
         """
@@ -43,8 +50,8 @@ class ProgramFlow:
         self.show_books()
         book = input("\n[i] Select book: ").strip()
         while (
-            book not in self.b1.dictionary.keys()
-            and book not in self.b2.dictionary.keys()
+            book not in self.dss.dictionary.keys()
+            and book not in self.b.dictionary.keys()
         ):
             self.helper.color_print(
                 "\n[!] Incorrect input format. Please try again.", "red"
@@ -63,30 +70,57 @@ class ProgramFlow:
                     self.helper.color_print("    [-] ", end="")
             print()
 
-        b1_books = self.b1.dictionary.keys()
         self.helper.color_print(
-            f"\n[+] Showing {len(b1_books)} Books in Translation 1:"
+            f"\n[+] Showing {len(self.books)} Availible Books in DSS and Selected Translation:"
         )
-        print_books(list(b1_books))
-
-        b2_books = self.b2.dictionary.keys()
-        self.helper.color_print(
-            f"\n[+] Showing {len(b2_books)} Books in Translation 2:"
-        )
-        print_books(list(b2_books))
+        print_books(self.books)
 
     def _get_book_len(self):
-        return len(self.b1.dictionary[self.book].keys())
+        return len(self.books)
+
+    # Fragment Operations
+    def select_fragment(self):
+        self.show_fragments()
+        frag = input("\n[i] Select fragment: ").strip()
+        while frag not in self.dss.dictionary[self.book].keys():
+            self.helper.color_print(
+                "\n[!] Incorrect input format. Please try again.", "red"
+            )
+            frag = input("\n[i] Select fragment:").strip()
+        self.fragment = frag
+
+    def show_fragments(self):
+        def print_fragments(frag_lst: list[str]):
+            self.helper.color_print("    [-] ", end="")
+            for i in range(len(frag_lst)):
+                self.helper.color_print(
+                    f"{frag_lst[i]}, {'\n' if (i + 1) % 5 == 0 else ''}", end=""
+                )
+                if (i + 1) % 5 == 0:
+                    self.helper.color_print("    [-] ", end="")
+            print()
+
+        num_frags = self._get_frag_num()
+        self.helper.color_print(
+            f"\n[+] Showing {num_frags} Availible Fragments for {self.book}:"
+        )
+        print_fragments(list(self.dss.dictionary[self.book].keys()))
+
+    def _get_frag_num(self):
+        return len(self.dss.dictionary[self.book].keys())
+
+    def _get_frag_len(self):
+        return len(self.dss.dictionary[self.book][self.fragment].keys())
 
     # Chapter Operations
 
     def select_chapter(self):
         self.show_chapters()
-        book_len = self._get_book_len()
+        frag_len = self._get_frag_len()
         chapter_index = input("\n[i] Select chapter: ").strip()
         while (
             not chapter_index.isdigit()
-            or int(chapter_index) > book_len
+            or int(chapter_index) > frag_len
             or int(chapter_index) <= 0
         ):
             self.helper.color_print(
@@ -96,10 +130,18 @@ class ProgramFlow:
         self.chapter = chapter_index
 
     def show_chapters(self):
-        self.helper.color_print(f"[-] {self._get_book_len()} Chapters in {self.book}")
+        self.helper.color_print(
+            f"[-] {self._get_frag_len()} Chapters in {self.fragment}"
+        )
 
-    def _get_chapter_len(self):
-        return len(self.b1.dictionary[self.book][self.chapter].keys())
+    def _get_chapter_len(self) -> int:
+        frag_len = len(
+            self.dss.dictionary[self.book][self.fragment][self.chapter].keys()
+        )
+        # b_len = len(self.b.dictionary[self.book][self.chapter].keys())
+        # return frag_len if frag_len <= b_len else b_len
+        # SHOULD ALWAYS BE FRAG LENGTH
+        return frag_len
 
     # Verse Operations
 
@@ -120,20 +162,24 @@ class ProgramFlow:
 
     def show_verses(self):
         self.helper.color_print(
-            f"[-] {self._get_chapter_len()} Verses in {self.book} {self.chapter}"
+            f"[-] {self._get_chapter_len()} Verses in {self.fragment} {self.chapter}"
         )
 
     # Main Program Flow
 
     def standard_flow(self):
-        sample_1 = self.b1.dictionary[self.book][self.chapter][self.verse]
-        sample_2 = self.b2.dictionary[self.book][self.chapter][self.verse]
+        sample_1 = self.dss.dictionary[self.book][self.fragment][self.chapter][
+            self.verse
+        ]
+        sample_2 = self.b.dictionary[self.book][self.chapter][self.verse]
 
-        self.helper.color_print(f"\n[+] Sample 1: {sample_1}", "cyan")
-        self.helper.color_print(f"\n[+] Sample 2: {sample_2}", "cyan")
+        self.helper.color_print(f"\n[+] Sample 1 (DSS): {sample_1}", "cyan")
+        self.helper.color_print(
+            f"\n[+] Sample 2 ({self.translation}): {sample_2}", "cyan"
+        )
 
         self.helper.color_print(
-            f"\n[r] {self.book} {self.chapter}:{self.verse}", "cyan"
+            f"\n[r] {self.fragment}/{self.book} {self.chapter}:{self.verse}", "cyan"
         )
 
         self.scoring.sample_1 = self.tokenizer.tokenize(sample_1)
@@ -162,10 +208,14 @@ class ProgramFlow:
         elif inpt == "C":
             self.helper.color_print("\n[+] Moving on!", "green")
             self.select_book()
+            self.select_fragment()
             self.select_chapter()
             self.select_verse()
         elif inpt == "SB":
             self.step_back()
+            self.helper.debug_print(
+                f"\n[~] b: {self.book} f: {self.fragment} c: {self.chapter} v: {self.verse}"
+            )
         elif inpt == "V":
             toggle = not self.verbose
             self.verbose = toggle
@@ -173,6 +223,9 @@ class ProgramFlow:
             self.scoring.verbose = toggle
         else:
             self.step_forward()
+            self.helper.debug_print(
+                f"\n[~] b: {self.book} f: {self.fragment} c: {self.chapter} v: {self.verse}"
+            )
 
     def step_forward(self):
 
@@ -189,42 +242,61 @@ class ProgramFlow:
             # Chapter is within the current book
             return
 
-        self.book = self.get_next_book()
+        next_frag = self.get_next_frag()
+        if next_frag:
+            # Moved to the next fragment in the book
+            self.fragment = next_frag
+            return
+
+        next_book = self.get_next_book()
+        self.book = next_book
+        self.fragment = list(self.dss.dictionary[next_book].keys())[0]
 
     def get_next_verse(self) -> str:
         next_verse = str(int(self.verse) + 1)
-        if (
-            next_verse in self.b1.dictionary[self.book][self.chapter]
-            and next_verse in self.b2.dictionary[self.book][self.chapter]
+        chapter_len = self._get_chapter_len()
+        while not (
+            next_verse in self.dss.dictionary[self.book][self.fragment][self.chapter]
+            and next_verse in self.b.dictionary[self.book][self.chapter]
         ):
-            return next_verse
-        return "1"
+            # Verse is not in either source chapter
+            if int(next_verse) > chapter_len:
+                return "1"
+            next_verse = str(int(next_verse) + 1)
+        return next_verse
 
     def get_next_chapter(self) -> str:
         next_chapter = str(int(self.chapter) + 1)
-        if (
-            next_chapter in self.b1.dictionary[self.book]
-            and next_chapter in self.b2.dictionary[self.book]
+        frag_len = self._get_frag_len()
+        while not (
+            next_chapter in self.dss.dictionary[self.book][self.fragment]
+            and next_chapter in self.b.dictionary[self.book]
         ):
-            return next_chapter
-        return "1"
+            # Chapter is not in either source book/fragment
+            if int(next_chapter) > frag_len:
+                return "1"
+            next_chapter = str(int(next_chapter) + 1)
+        return next_chapter
+
+    def get_next_frag(self) -> None | str:
+        cur_frags = list(self.dss.dictionary[self.book].keys())
+        cur_frag_index = cur_frags.index(self.fragment)
+        next_frag_index = cur_frag_index + 1
+
+        if next_frag_index >= len(cur_frags):
+            # Need to move to the next book
+            return None
+
+        return cur_frags[next_frag_index]
 
     def get_next_book(self) -> str:
-        b1_books = list(self.b1.dictionary.keys())
-        cur_b1_book_index = b1_books.index(self.book)
-        next_b1_index = cur_b1_book_index + 1
+        cur_book_index = self.books.index(self.book)
+        next_b1_index = cur_book_index + 1
 
-        if next_b1_index >= len(b1_books):
+        if next_b1_index >= len(self.books):
             next_b1_index = 0
 
-        # b2_books = list(self.b2.dictionary.keys())
-        # cur_b2_book_index = b2_books.index(self.book)
-        # next_b2_index = cur_b2_book_index + 1
-
-        # if next_b2_index >= len(b1_books):
-        #     next_b2_index = 0
-
-        return b1_books[next_b1_index]
+        return self.books[next_b1_index]
 
     def step_back(self):
 
@@ -234,51 +306,79 @@ class ProgramFlow:
             # Verse is within the current chapter
             return
 
-        prev_chapter, book_change = self.get_prev_chapter()
+        prev_chapter, frag_change = self.get_prev_chapter()
         self.chapter = prev_chapter
+        if not frag_change:
+            # Chapter is within the current fragment
+            return
+
+        prev_frag, book_change = self.get_prev_frag()
+        self.fragment = prev_frag
         if not book_change:
-            # Chapter is within the current book
+            # Frag is within the current book
             return
 
         self.book = self.get_prev_book()
+        self.fragment = list(self.dss.dictionary[self.book].keys())[-1]
 
     def get_prev_verse(self) -> tuple[str, bool]:
         prev_verse = str(int(self.verse) - 1)
-        if (
-            prev_verse in self.b1.dictionary[self.book][self.chapter]
-            and prev_verse in self.b2.dictionary[self.book][self.chapter]
+        prev_chapter, frag_change = self.get_prev_chapter()
+        if not (
+            prev_verse in self.dss.dictionary[self.book][self.fragment][self.chapter]
+            and prev_verse in self.b.dictionary[self.book][self.chapter]
         ):
-            return prev_verse, False
-        prev_book = self.get_prev_book()
-        prev_chapter, book_change = self.get_prev_chapter()
-        return list(self.b1.dictionary[prev_book][prev_chapter].keys())[-1], True
+            if frag_change:
+                prev_frag, book_change = self.get_prev_frag()
+                if book_change:
+                    prev_book = self.get_prev_book()
+                    return list(
+                        self.dss.dictionary[prev_book][prev_frag][prev_chapter].keys()
+                    )[-1], True
+                return list(
+                    self.dss.dictionary[self.book][prev_frag][prev_chapter].keys()
+                )[-1], True
+            return list(
+                self.dss.dictionary[self.book][self.fragment][prev_chapter].keys()
+            )[-1], True
+
+            # Verse is not in the current chapter
+        return prev_verse, False
 
     def get_prev_chapter(self) -> tuple[str, bool]:
         prev_chapter = str(int(self.chapter) - 1)
-        if (
-            prev_chapter in self.b1.dictionary[self.book]
-            and prev_chapter in self.b2.dictionary[self.book]
+        if not (
+            prev_chapter in self.dss.dictionary[self.book][self.fragment]
+            and prev_chapter in self.b.dictionary[self.book]
         ):
-            return prev_chapter, False
+            # Chapter is not in the current fragment
+            prev_frag, book_change = self.get_prev_frag()
+            if book_change:
+                prev_book = self.get_prev_book()
+                return list(self.dss.dictionary[prev_book][prev_frag].keys())[-1], True
+            return list(self.dss.dictionary[self.book][prev_frag].keys())[-1], True
+        return prev_chapter, False
+
+    def get_prev_frag(self) -> tuple[str, bool]:
+        cur_frags = list(self.dss.dictionary[self.book].keys())
+        cur_frag_index = cur_frags.index(self.fragment)
+        prev_frag_index = cur_frag_index - 1
+
         prev_book = self.get_prev_book()
-        return list(self.b1.dictionary[prev_book].keys())[-1], True
+
+        if prev_frag_index < 0:
+            # Need to move to the prev book
+            return list(self.dss.dictionary[prev_book].keys())[-1], True
+        return cur_frags[prev_frag_index], False
 
     def get_prev_book(self) -> str:
-        b1_books = list(self.b1.dictionary.keys())
-        cur_b1_book_index = b1_books.index(self.book)
-        prev_b1_index = cur_b1_book_index - 1
+        cur_book_index = self.books.index(self.book)
+        prev_index = cur_book_index - 1
 
-        if prev_b1_index < 0:
-            prev_b1_index = len(b1_books) - 1
+        if prev_index < 0:
+            prev_index = len(self.books) - 1
 
-        # b2_books = list(self.b2.dictionary.keys())
-        # cur_b2_book_index = b2_books.index(self.book)
-        # next_b2_index = cur_b2_book_index + 1
-
-        # if next_b2_index >= len(b1_books):
-        #     next_b2_index = 0
-
-        return b1_books[prev_b1_index]
+        return self.books[prev_index]
 
     def show_movement_options(self):
         self.helper.color_print("\n[+] Movement Options: ")
