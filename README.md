@@ -1,6 +1,6 @@
-# Andrew Boob RLST 110 Creative Project
+# Andrew RLST 110 Creative Project
 
-> [!abstact]
+> [!abstract]
 > This python command line interface allows for the comparison of translated dead sea scroll fragments with the user's choice of Bible Translation. 
 
 ## Setup
