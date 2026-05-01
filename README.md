@@ -7,7 +7,27 @@
 
 ### 1. Install Python
 
-Make sure python is installed on your computer. You can download an official version of python [here](https://www.python.org/downloads/).
+#### 1. Download 
+
+You can download an official version of python [here](https://www.python.org/downloads/).
+
+#### 2. Install
+
+Open the downloaded file and follow the on-screen installation steps.
+
+#### 3. Verify
+
+Open your teminal and run the following command
+
+```bash
+# Mac/Linux
+python3 --version
+```
+
+```bash
+# Windows
+python --version
+```
 
 ### 2. Clone the Repository
 

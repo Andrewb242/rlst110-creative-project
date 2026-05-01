@@ -26,12 +26,12 @@ class ProgramFlow:
         )
 
     def select_translation(self) -> BibleLoader:
-        t_index = input("\n[i] Select translation: ").strip()
+        t_index = input("\n[?] Select translation: ").strip()
         while not t_index.isdigit() or int(t_index) >= len(available_translations):
             self.helper.color_print(
                 "\n[!] Incorrect input format. Please try again.", "red"
             )
-            t_index = input("\n[i] Select translation:").strip()
+            t_index = input("\n[?] Select translation:").strip()
         translation = available_translations[int(t_index)]
         self.translation = translation
         return BibleLoader(translation)
@@ -48,7 +48,7 @@ class ProgramFlow:
 
     def select_book(self):
         self.show_books()
-        book = input("\n[i] Select book: ").strip()
+        book = input("\n[?] Select book: ").strip()
         while (
             book not in self.dss.dictionary.keys()
             and book not in self.b.dictionary.keys()
@@ -56,7 +56,7 @@ class ProgramFlow:
             self.helper.color_print(
                 "\n[!] Incorrect input format. Please try again.", "red"
             )
-            book = input("\n[i] Select book:").strip()
+            book = input("\n[?] Select book:").strip()
         self.book = book
 
     def show_books(self):
@@ -81,24 +81,18 @@ class ProgramFlow:
     # Fragment Operations
     def select_fragment(self):
         self.show_fragments()
-        frag = input("\n[i] Select fragment: ").strip()
-        while frag not in self.dss.dictionary[self.book].keys():
+        frag_num = input("\n[?] Select fragment: ").strip()
+        while not frag_num.isdigit() or int(frag_num) >= self._get_frag_num():
             self.helper.color_print(
                 "\n[!] Incorrect input format. Please try again.", "red"
             )
-            frag = input("\n[i] Select fragment:").strip()
-        self.fragment = frag
+            frag_num = input("\n[?] Select fragment:").strip()
+        self.fragment = list(self.dss.dictionary[self.book].keys())[int(frag_num)]
 
     def show_fragments(self):
         def print_fragments(frag_lst: list[str]):
-            self.helper.color_print("    [-] ", end="")
             for i in range(len(frag_lst)):
-                self.helper.color_print(
-                    f"{frag_lst[i]}, {'\n' if (i + 1) % 5 == 0 else ''}", end=""
-                )
-                if (i + 1) % 5 == 0:
-                    self.helper.color_print("    [-] ", end="")
-            print()
+                self.helper.color_print(f"    [{i}] {frag_lst[i]}")
 
         num_frags = self._get_frag_num()
         self.helper.color_print(
@@ -117,7 +111,7 @@ class ProgramFlow:
     def select_chapter(self):
         self.show_chapters()
         frag_len = self._get_frag_len()
-        chapter_index = input("\n[i] Select chapter: ").strip()
+        chapter_index = input("\n[?] Select chapter: ").strip()
         while (
             not chapter_index.isdigit()
             or int(chapter_index) > frag_len
@@ -126,7 +120,7 @@ class ProgramFlow:
             self.helper.color_print(
                 "\n[!] Incorrect input format. Please try again.", "red"
             )
-            chapter_index = input("\n[i] Select chapter:").strip()
+            chapter_index = input("\n[?] Select chapter:").strip()
         self.chapter = chapter_index
 
     def show_chapters(self):
@@ -148,7 +142,7 @@ class ProgramFlow:
     def select_verse(self):
         self.show_verses()
         chapter_len = self._get_chapter_len()
-        verse_index = input("\n[i] Select verse: ").strip()
+        verse_index = input("\n[?] Select verse: ").strip()
         while (
             not verse_index.isdigit()
             or int(verse_index) > chapter_len
@@ -157,7 +151,7 @@ class ProgramFlow:
             self.helper.color_print(
                 "\n[!] Incorrect input format. Please try again.", "red"
             )
-            verse_index = input("\n[i] Select verse:").strip()
+            verse_index = input("\n[?] Select verse:").strip()
         self.verse = verse_index
 
     def show_verses(self):
@@ -182,27 +176,29 @@ class ProgramFlow:
             f"\n[r] {self.fragment}/{self.book} {self.chapter}:{self.verse}", "cyan"
         )
 
-        self.scoring.sample_1 = self.tokenizer.tokenize(sample_1)
-        self.scoring.sample_2 = self.tokenizer.tokenize(sample_2)
+        sample_1 = self.tokenizer.tokenize(sample_1)
+        sample_2 = self.tokenizer.tokenize(sample_2)
 
-        self.helper.debug_print(f"\n[~] Sample 1 Tokens: {self.scoring.sample_1}")
-        self.helper.debug_print(f"\n[~] Sample 2 Tokens: {self.scoring.sample_2}")
+        self.helper.debug_print(f"\n[~] Sample 1 Tokens: {sample_1}")
+        self.helper.debug_print(f"\n[~] Sample 2 Tokens: {sample_2}")
 
-        target_len = len(self.scoring.sample_1)
-        if len(self.scoring.sample_2) > target_len:
-            target_len = len(self.scoring.sample_2)
+        self.scoring.set_samples(sample_1, sample_2)
 
-        self.helper.debug_print(f"\n[~] Target Length: {target_len}")
-
-        self.scoring.variance_test(target_len)
-        self.scoring.subset_test()
+        self._run_tests()
 
         self.move()
+
+    def _run_tests(self):
+        self.scoring.variance_test()
+        self.scoring.subset_test()
+        self.scoring.unique_word_count_test()
+
+    # Movement
 
     def move(self):
         self.show_movement_options()
 
-        inpt = input("\n[i] How would you like to proceed?: ").strip().upper()
+        inpt = input("\n[?] How would you like to proceed?: ").strip().upper()
         if inpt == "E":
             exit()
         elif inpt == "C":
@@ -220,7 +216,7 @@ class ProgramFlow:
             toggle = not self.verbose
             self.verbose = toggle
             self.helper.verbose = toggle
-            self.scoring.verbose = toggle
+            self.scoring.toggle_verbose()
         else:
             self.step_forward()
             self.helper.debug_print(
